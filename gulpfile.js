@@ -1,51 +1,76 @@
-var gulp = require('gulp'),
-    // php server & livereload
-    connect = require('gulp-connect-php'),
-    browserSync = require('browser-sync'),
-    // minify js
-    concat = require('gulp-concat'),
-    uglify = require('gulp-uglify'),
-    // minify css
-    minifyCss = require('gulp-minify-css'),
-    rename = require('gulp-rename');;
+var gulp = require('gulp');
+// Requires the gulp-sass plugin
+var sass = require('gulp-sass');
+// spinning up server
+var browserSync = require('browser-sync'),
+	php = require('gulp-connect-php');
+// concatenate JS & CSS
+var useref = require('gulp-useref');
+// minify
+var uglify = require('gulp-uglify');
+var gulpIf = require('gulp-if');
+// Optimizing Images
+var imagemin = require('gulp-imagemin');
 
 
-// open pbp webserver & livereload
-gulp.task('connect-sync', function() {
-  connect.server({}, function (){
-    browserSync({
-      proxy: 'localhost:8000'
+
+gulp.task('php', function(){
+	php.server({base:"app",port:8080});
+});
+
+gulp.task('browserSync',['php'], function(){
+	browserSync({
+        proxy: '127.0.0.1:8080',
+        port: 8080
     });
-  });
+});
 
-  gulp.watch('**/*.php').on('change', function () {
-    browserSync.reload();
-  });
+gulp.task('sass', function(){
+	return gulp.src('app/scss/**/*.scss')
+		.pipe(sass()) //Converts Sass to css with gulp-sass
+		.pipe(gulp.dest('app/css'))
+		.pipe(browserSync.reload({
+			stream:true
+		}))
 });
 
 
-// minify js
-gulp.task('js',function() {
-  gulp.src('./js/*.js')
-    .pipe(concat('app.js')) //let all js file into app.js
-    .pipe(uglify()) //minify js
-    .pipe(rename({
-          suffix: '.min'
-      }))
-    .pipe(gulp.dest('./js'))
-});
-
-// minify css
-gulp.task('minify-css', function() {
-  gulp.src('./css/*.css')
-    .pipe(minifyCss({compatibility: 'ie8'}))
-    .pipe(rename({
-          suffix: '.min'
-      }))
-    .pipe(gulp.dest('./css'))
+gulp.task('watch', ['browserSync','sass'], function(){
+	gulp.watch('app/scss/**/*.scss',['sass']);
+	// Reloads the browser whenever HTML or JS files change
+	gulp.watch('app/**/*.php', browserSync.reload);
+	gulp.watch('app/js/**/*.js',browserSync.reload);
 });
 
 
-gulp.task('default', ['connect-sync','minify-css','js'],function() {
-  gulp.watch('./js/*',['js']); //監聽js file
-});
+gulp.task('default', ['watch']);
+
+// gulp.task('useref',function() {
+// 	// return gulp.src('app/*.php')
+// 	return gulp.src('app/source/footer.php')
+// 		.pipe(useref())
+		
+//     	.pipe(gulpIf('*.js', uglify()))
+// 		.pipe(gulp.dest('dist'))
+// });
+
+
+// gulp.task('images', function(){
+// 	return gulp.src('app/images/**/*.+(png|jpg|gif|svg)')
+// 	.pipe(imagemin())
+// 	.pipe(gulp.dest('dist/images'))
+// });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
