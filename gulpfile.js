@@ -1,76 +1,48 @@
-var gulp = require('gulp');
-// Requires the gulp-sass plugin
-var sass = require('gulp-sass');
-// spinning up server
-var browserSync = require('browser-sync'),
-	php = require('gulp-connect-php');
-// concatenate JS & CSS
-var useref = require('gulp-useref');
-// minify
-var uglify = require('gulp-uglify');
-var gulpIf = require('gulp-if');
-// Optimizing Images
-var imagemin = require('gulp-imagemin');
+var gulp = require('gulp'),               // 載入 gulp
+    gulpUglify = require('gulp-uglify'),  // 載入 gulp-uglify
+    gulpSass = require('gulp-sass'),      // 載入 gulp-sass
+    gulpPlumber = require('gulp-plumber'),// 載入 gulp-plumber
+    gulpLivereload = require('gulp-livereload'),
+    connect = require('gulp-connect-php'),
+    browserSync = require('browser-sync');
 
+gulp.task('watch', function () {
+    gulpLivereload.listen();
 
-
-gulp.task('php', function(){
-	php.server({base:"app",port:8080});
-});
-
-gulp.task('browserSync',['php'], function(){
-	browserSync({
-        proxy: '127.0.0.1:8080',
-        port: 8080
+    gulp.watch('**/*.html').on('change', function () {
+        browserSync.reload();
     });
+
+    gulp.watch('js/original/*.js', ['scripts']);
+    gulp.watch('scss/*.scss', ['styles']);
 });
 
-gulp.task('sass', function(){
-	return gulp.src('app/scss/**/*.scss')
-		.pipe(sass()) //Converts Sass to css with gulp-sass
-		.pipe(gulp.dest('app/css'))
-		.pipe(browserSync.reload({
-			stream:true
-		}))
+gulp.task('connect-sync', function() {
+    connect.server({}, function (){
+        browserSync({
+            proxy: '127.0.0.1:8000'
+        });
+    });
+ 
+  
 });
 
-
-gulp.task('watch', ['browserSync','sass'], function(){
-	gulp.watch('app/scss/**/*.scss',['sass']);
-	// Reloads the browser whenever HTML or JS files change
-	gulp.watch('app/**/*.php', browserSync.reload);
-	gulp.watch('app/js/**/*.js',browserSync.reload);
+gulp.task('script', function () {
+    gulp.src('js/original/*.js')        // 指定要處理的原始 JavaScript 檔案目錄
+        .pipe(gulpPlumber())                    // 使用 gulp-plumber 處理例外
+        .pipe(gulpUglify())                     // 將 JavaScript 做最小化
+        .pipe(gulp.dest('js/minify'))  // 指定最小化後的 JavaScript 檔案目錄
+        .pipe(gulpLivereload());                // 當檔案異動後自動重新載入頁面
 });
 
+gulp.task('styles', function () {
+    gulp.src('scss/*.scss')    // 指定要處理的 Scss 檔案目錄
+        .pipe(gulpPlumber())      // 使用 gulp-plumber 處理例外
+        .pipe(gulpSass({          // 編譯 Scss
+            outputStyle: 'compressed'
+        }))
+        .pipe(gulp.dest('css'))  // 指定編譯後的 css 檔案目錄
+        .pipe(gulpLivereload());  // 當檔案異動後自動重新載入頁面
+});
 
-gulp.task('default', ['watch']);
-
-// gulp.task('useref',function() {
-// 	// return gulp.src('app/*.php')
-// 	return gulp.src('app/source/footer.php')
-// 		.pipe(useref())
-		
-//     	.pipe(gulpIf('*.js', uglify()))
-// 		.pipe(gulp.dest('dist'))
-// });
-
-
-// gulp.task('images', function(){
-// 	return gulp.src('app/images/**/*.+(png|jpg|gif|svg)')
-// 	.pipe(imagemin())
-// 	.pipe(gulp.dest('dist/images'))
-// });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+gulp.task('default', ['connect-sync','styles', 'script', 'watch']);
